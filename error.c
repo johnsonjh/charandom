@@ -5,21 +5,24 @@
 #include <string.h>
 
 void
-error(int doexit, int err, const char* fmt, ...)
+error(int doexit, int err, const char *fmt, ...)
 {
-    va_list ap;
+  va_list ap;
 
-    fflush(stdout);
-    fflush(stderr);
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
+  fflush(stdout);
+  fflush(stderr);
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
 
-    if (err > 0)
-        fprintf(stderr, "\n  %s (Errno %d)\n", strerror(err), err);
+  if (err > 0)
+    {
+      fprintf(stderr, "\r\n  %s (Errno %d)\r\n", strerror(err), err);
+    }
 
-    if (doexit) {
-        fflush(stderr);
-        exit(1);
+  if (doexit)
+    {
+      fflush(stderr);
+      exit(1);
     }
 }

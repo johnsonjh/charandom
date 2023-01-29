@@ -1,9 +1,11 @@
 /*
- * Copyright (c) 1996, David Mazieres <dm@uun.org>
- * Copyright (c) 2008, Damien Miller <djm@openbsd.org>
- * Copyright (c) 2013, Markus Friedl <markus@openbsd.org>
- * Copyright (c) 2014, Theo de Raadt <deraadt@openbsd.org>
- * Copyright (c) 2015, Sudhi Herle   <sudhi@herle.net>
+ * Copyright (c) 1996 David Mazieres <dm@uun.org>
+ * Copyright (c) 2008 Damien Miller <djm@openbsd.org>
+ * Copyright (c) 2013 Markus Friedl <markus@openbsd.org>
+ * Copyright (c) 2014 Theo de Raadt <deraadt@openbsd.org>
+ * Copyright (c) 2015 Sudhi Herle <sudhi@herle.net>
+ * Copyright (c) 2021 Jeffrey H. Johnson <trnsz@pobox.com>
+ * Copyright (c) 2023 The DPS8M Development Team
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,227 +20,303 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-
 /*
- * Chacha/AES based random number generator based on OpenBSD
- * arc4random. Generalized to use chacha20 OR AES-256-CTR
- *
+ * ChaCha based random number generator based on OpenBSD arc4random.
  * This cryptographic random generator passes NIST-SP-800-22 (Rev 1).
  */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <assert.h>
 
 #include "cryptorand.h"
 
-#define minimum(a, b) ((a) < (b) ? (a) : (b))
+void error(int doexit, int err, const char *fmt, ...);
 
-
-// Every these many bytes, we reseed and reset the rand state
-#define RAND_RESEED_BYTES   (128 * 1024)
-
-// rekey the aes state
-static inline void
-_rs_rekey(crypto_rand_state* st, uint8_t *dat, size_t datlen)
+static int
+dps__randopen(const char *name)
 {
-    st->crypt_buf(st);
+  int fd = open(name, O_RDONLY);
 
-    /* mix in optional user provided data */
-    if (dat) {
-        size_t i, m;
-
-        m = minimum(datlen, sizeof st->buf);
-        for (i = 0; i < m; i++)
-            st->buf[i] ^= dat[i];
-
-        memset(dat, 0, datlen);
+  if (fd < 0)
+    {
+      error(1, errno, "Cannot open system random number dev %s", name);
     }
 
-    /* immediately reinit for backtracking resistance */
-    st->crypt_reinit(st);
+  return fd;
 }
 
-
-// stir the pot by rekeying
-static void
-_rs_stir(crypto_rand_state* st)
+int
+dps__getentropy(void *buf, size_t n)
 {
-    st->crypt_rekey(st);
+  static int  fd  = -1;
+  uint8_t *   b   = (uint8_t *)buf;
 
-    /* invalidate rand buf */
-    memset(st->buf, 0, sizeof st->buf);
-    st->ptr   = st->buf + sizeof st->buf;
-    st->count = RAND_RESEED_BYTES;
+  if (fd < 0)
+    {
+      fd = dps__randopen("/dev/urandom");
+    }
+
+  while (n > 0)
+    {
+      ssize_t m = (read)( fd, b, n );
+
+      if (m < 0)
+        {
+          if (errno == EINTR)
+            {
+              continue;
+            }
+
+          error(1, errno, "Fatal read error while reading rand dev");
+        }
+
+      b  += m;
+      n  -= m;
+    }
+
+  return 0;
 }
+#define minimum(a, b)      (( a ) < ( b ) ? ( a ) : ( b ))
 
+#define RAND_RESEED_BYTES  ( 128 * 1024 )
 
-// maybe stir the pot
 static inline void
-_rs_stir_if_needed(crypto_rand_state* st, size_t len)
+_rs_rekey(crypto_rand_state *st, uint8_t *dat, size_t datlen)
 {
-    if (st->count <= len)
-        _rs_stir(st);
+  st->crypt_buf(st);
 
-    // We explicitly don't worry about underflow because we want
-    // this to be somewhat random after we stir.
-    st->count -= len;
+  /*
+   * Mix in optional user provided data
+   */
+
+  if (dat)
+    {
+      size_t i, m;
+
+      m = minimum(datlen, sizeof st->buf);
+      for (i = 0; i < m; i++)
+        {
+          st->buf[i] ^= dat[i];
+        }
+
+      memset(dat, 0, datlen);
+    }
+
+  /*
+   * Immediately re-init for backtracking resistance
+   */
+
+  st->crypt_reinit(st);
 }
 
+/*
+ * Stir the pot by rekeying
+ */
 
-// virtual funcs for selecting AES-256-CTR vs CHACHA20
+static void
+_rs_stir(crypto_rand_state *st)
+{
+  st->crypt_rekey(st);
+
+  /*
+   * Invalidate rand buf
+   */
+
+  memset(st->buf, 0, sizeof st->buf);
+  st->ptr    = st->buf + sizeof st->buf;
+  st->count  = RAND_RESEED_BYTES;
+}
+
+/*
+ * Maybe stir the pot
+ */
+
+static inline void
+_rs_stir_if_needed(crypto_rand_state *st, size_t len)
+{
+  if (st->count <= len)
+    {
+      _rs_stir(st);
+    }
+
+  /*
+   * We explicitly don't worry about underflow because
+   * we want this to be somewhat random after we stir.
+   */
+
+  st->count -= len;
+}
+
 #include "cipher.h"
-
 
 static void
 _chacha_setup(crypto_rand_state *st)
 {
-    st->crypt_buf    = __chacha_crypt_buf;
-    st->crypt_reinit = __chacha_reinit;
-    st->crypt_rekey  = __chacha_rekey;
+  st->crypt_buf     = __chacha_crypt_buf;
+  st->crypt_reinit  = __chacha_reinit;
+  st->crypt_rekey   = __chacha_rekey;
 }
-
-static void
-_aes_setup(crypto_rand_state *st)
-{
-    st->crypt_buf    = __aes_crypt_buf;
-    st->crypt_reinit = __aes_reinit;
-    st->crypt_rekey  = __aes_rekey;
-}
-
 
 /*
  * External API
  */
 
-
-// initialize the aesrand generator
 int
-crypto_rand_init(crypto_rand_state *st, int algo, crypto_rand_entropy_t entropy)
+crypto_rand_init(crypto_rand_state *st, int algo,
+                 crypto_rand_entropy_t entropy)
 {
-    if (!entropy) return -EINVAL;
-
-
-    memset(st, 0, sizeof *st);
-    st->entropy = entropy;
-
-    switch (algo) {
-        case CRYPTO_RAND_AES:
-            _aes_setup(st);
-            __aes_init(st);
-            break;
-
-        case CRYPTO_RAND_CHACHA20:
-            _chacha_setup(st);
-            __chacha_init(st);
-            break;
-
-        default:
-            return -EINVAL;
+  if (!entropy)
+    {
+      return -EINVAL;
     }
 
-    // When we startup, st->buf is zero so, we're encrypting a
-    // zero-buf with a random key & IV.
-    _rs_rekey(st, 0, 0);
-    return 0;
-}
+  memset(st, 0, sizeof *st);
+  st->entropy = entropy;
 
+  switch (algo)
+    {
+    case CRYPTO_RAND_CHACHA20:
+      _chacha_setup(st);
+      __chacha_init(st);
+      break;
 
-// fill buffer with randomness
-void
-crypto_rand_buf(crypto_rand_state* st, void *buf, size_t n)
-{
-    uint8_t *end = st->buf + sizeof st->buf;
-
-    _rs_stir_if_needed(st, n);
-    while (n > 0) {
-        size_t avail = end - st->ptr;
-        if (avail > 0) {
-            size_t m = minimum(n, avail);
-
-            memcpy(buf, st->ptr, m);
-
-            buf     += m;
-            n       -= m;
-            st->ptr += m;
-        } else 
-            _rs_rekey(st, NULL, 0);
+    default:
+      return -EINVAL;
     }
-}
 
+  /*
+   * When we startup, st->buf is zero so, we are
+   * encrypting a zero-buf with a random key & IV.
+   */
+
+  _rs_rekey(st, 0, 0);
+  return 0;
+}
 
 /*
- * Calculate a uniformly distributed random number less than upper_bound
- * avoiding "modulo bias".
+ * Fill buffer with randomness
+ */
+
+void
+crypto_rand_buf(crypto_rand_state *st, void *buf, size_t n)
+{
+  uint8_t *end = st->buf + sizeof st->buf;
+
+  _rs_stir_if_needed(st, n);
+  while (n > 0)
+    {
+      size_t avail = end - st->ptr;
+      if (avail > 0)
+        {
+          size_t m = minimum(n, avail);
+
+          memcpy(buf, st->ptr, m);
+
+          buf      += m;
+          n        -= m;
+          st->ptr  += m;
+        }
+      else
+        {
+          _rs_rekey(st, NULL, 0);
+        }
+    }
+}
+
+/*
+ * Calculate a uniformly distributed random number less than
+ * upper_bound avoiding "modulo bias".
  *
- * Uniformity is achieved by generating new random numbers until the one
- * returned is outside the range [0, 2**32 % upper_bound).  This
- * guarantees the selected random number will be inside
- * [2**32 % upper_bound, 2**32) which maps back to [0, upper_bound)
+ * Uniformity is achieved by generating new random numbers until
+ * the one returned is outside the range [0, 2**32 % upper_bound].
+ * This guarantees the selected random number will be inside
+ * [2**32 % upper_bound, 2**32] which maps back to [0, upper_bound]
  * after reduction modulo upper_bound.
  */
+
 uint32_t
 crypto_rand_uniform32_bounded(crypto_rand_state *st, uint32_t upper_bound)
 {
-    uint32_t r, min;
+  uint32_t r, min;
 
-    if (upper_bound < 2)
-        return 0;
-
-    /* 2**32 % x == (2**32 - x) % x */
-    min = -upper_bound % upper_bound;
-
-    /*
-     * This could theoretically loop forever but each retry has
-     * p > 0.5 (worst case, usually far better) of selecting a
-     * number inside the range we need, so it should rarely need
-     * to re-roll.
-     */
-    for (;;) {
-        r = crypto_rand_uniform32(st);
-        if (r >= min)
-            break;
+  if (upper_bound < 2)
+    {
+      return 0;
     }
 
-    return r % upper_bound;
+  /*
+   * 2**32 % x == (2**32 - x) % x
+   */
+
+  min = -upper_bound % upper_bound;
+
+  /*
+   * This could theoretically loop forever but each retry has
+   * p > 0.5 (worst case, usually far better) of selecting a
+   * number inside the range we need, so it should rarely need
+   * to re-roll.
+   */
+
+  for (;;)
+    {
+      r = crypto_rand_uniform32(st);
+      if (r >= min)
+        {
+          break;
+        }
+    }
+
+  return r % upper_bound;
 }
 
 /*
- * Calculate a uniformly distributed random number less than upper_bound
- * avoiding "modulo bias".
+ * Calculate a uniformly distributed random number less than
+ * upper_bound avoiding "modulo bias".
  *
- * Uniformity is achieved by generating new random numbers until the one
- * returned is outside the range [0, 2**64 % upper_bound).  This
- * guarantees the selected random number will be inside
- * [2**64 % upper_bound, 2**64) which maps back to [0, upper_bound)
+ * Uniformity is achieved by generating new random numbers until
+ * the one returned is outside the range [0, 2**64 % upper_bound].
+ * This guarantees the selected random number will be inside
+ * [2**64 % upper_bound, 2**64] which maps back to [0, upper_bound]
  * after reduction modulo upper_bound.
  */
+
 uint64_t
 crypto_rand_uniform64_bounded(crypto_rand_state *st, uint64_t upper_bound)
 {
-    uint64_t r, min;
+  uint64_t r, min;
 
-    if (upper_bound < 2)
-        return 0;
-
-    /* 2**64 % x == (2**64 - x) % x */
-    min = -upper_bound % upper_bound;
-
-    /*
-     * This could theoretically loop forever but each retry has
-     * p > 0.5 (worst case, usually far better) of selecting a
-     * number inside the range we need, so it should rarely need
-     * to re-roll.
-     */
-    for (;;) {
-        r = crypto_rand_uniform64(st);
-        if (r >= min)
-            break;
+  if (upper_bound < 2)
+    {
+      return 0;
     }
 
-    return r % upper_bound;
+  /*
+   * 2**64 % x == (2**64 - x) % x
+   */
+
+  min = -upper_bound % upper_bound;
+
+  /*
+   * This could theoretically loop forever but each retry has
+   * p > 0.5 (worst case, usually far better) of selecting a
+   * number inside the range we need, so it should rarely need
+   * to re-roll.
+   */
+
+  for (;;)
+    {
+      r = crypto_rand_uniform64(st);
+      if (r >= min)
+        {
+          break;
+        }
+    }
+
+  return r % upper_bound;
 }
-/* EOF */
