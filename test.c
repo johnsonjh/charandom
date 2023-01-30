@@ -5,11 +5,11 @@
  * Copyright (c) 2023 The DPS8M Development Team
  */
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include "charandom.h"
 
@@ -20,7 +20,7 @@ main(int argc, const char *argv[])
 
   if (crypto_rand_init(&st, CRYPTO_RAND_CHACHA20, cha_getentropy))
     {
-      (void)fprintf(stderr, "\r\nInitialization failed. Aborting!\r\n");
+      (void)fprintf(stderr, "FATAL: Initialization failed. Aborting!\r\n");
       abort();
     }
 
@@ -31,7 +31,7 @@ main(int argc, const char *argv[])
       int z = atoi(argv[1]);
       if (z < 0)
         {
-          (void)fprintf(stderr, "ERROR: Invalid size %s\r\n", argv[1]);
+          (void)fprintf(stderr, "ERROR: Invalid size %s.\r\n", argv[1]);
           exit(1);
         }
       if (z == 0)
@@ -45,7 +45,7 @@ main(int argc, const char *argv[])
   uint8_t *buf = malloc(n);
   if (buf == NULL)
     {
-      (void)fprintf(stderr, "\r\nOut of memory. Aborting!\r\n");
+      (void)fprintf(stderr, "FATAL: Out of memory. Aborting!\r\n");
       abort();
     }
 

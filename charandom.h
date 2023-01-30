@@ -58,20 +58,20 @@ typedef struct chacha_ctx chacha_ctx;
 # define ROTL32(v, n)   ( U32V(( v ) << ( n )) | \
                               (( v ) >> ( 32 - ( n ))))
 
-# define U8TO32_LITTLE(p)      \
-  (((u32)(( p )[0] ))        | \
-   ((u32)(( p )[1] ) <<  8 ) | \
-   ((u32)(( p )[2] ) << 16 ) | \
+# define U8TO32_LITTLE(p)            \
+  (((u32)(( p )[0] ))        |       \
+   ((u32)(( p )[1] ) <<  8 ) |       \
+   ((u32)(( p )[2] ) << 16 ) |       \
    ((u32)(( p )[3] ) << 24 ))
 
-# define U32TO8_LITTLE(p, v)        \
-  do                                \
-    {                               \
-      ( p )[0]  = U8V(( v ));       \
-      ( p )[1]  = U8V(( v ) >>  8); \
-      ( p )[2]  = U8V(( v ) >> 16); \
-      ( p )[3]  = U8V(( v ) >> 24); \
-    }                               \
+# define U32TO8_LITTLE(p, v)         \
+  do                                 \
+    {                                \
+      ( p )[0]  = U8V(( v ));        \
+      ( p )[1]  = U8V(( v ) >>  8);  \
+      ( p )[2]  = U8V(( v ) >> 16);  \
+      ( p )[3]  = U8V(( v ) >> 24);  \
+    }                                \
   while (0)
 
 # define ROTATE(v, c)   ( ROTL32(v, c))
@@ -79,14 +79,14 @@ typedef struct chacha_ctx chacha_ctx;
 # define PLUS(v, w)     ( U32V ( ( v ) + ( w )))
 # define PLUSONE(v)     ( PLUS ( ( v ), 1))
 
-# define QUARTERROUND(a, b, c, d) \
-  a  = PLUS(a, b);                \
-  d  = ROTATE(XOR(d, a), 16);     \
-  c  = PLUS(c, d);                \
-  b  = ROTATE(XOR(b, c), 12);     \
-  a  = PLUS(a, b);                \
-  d  = ROTATE(XOR(d, a),  8);     \
-  c  = PLUS(c, d);                \
+# define QUARTERROUND(a, b, c, d)    \
+  a  = PLUS(a, b);                   \
+  d  = ROTATE(XOR(d, a), 16);        \
+  c  = PLUS(c, d);                   \
+  b  = ROTATE(XOR(b, c), 12);        \
+  a  = PLUS(a, b);                   \
+  d  = ROTATE(XOR(d, a),  8);        \
+  c  = PLUS(c, d);                   \
   b  = ROTATE(XOR(b, c),  7);
 
 static const char  sigma[16]  = "expand 32-byte k";
@@ -120,6 +120,7 @@ chacha_keysetup(chacha_ctx *x, const u8 *k, u32 kbits, u32 ivbits)
   x->input [9]  = U8TO32_LITTLE(k +  4);
   x->input[10]  = U8TO32_LITTLE(k +  8);
   x->input[11]  = U8TO32_LITTLE(k + 12);
+
   x->input [0]  = U8TO32_LITTLE(constants +  0);
   x->input [1]  = U8TO32_LITTLE(constants +  4);
   x->input [2]  = U8TO32_LITTLE(constants +  8);
@@ -131,6 +132,7 @@ chacha_ivsetup(chacha_ctx *x, const u8 *iv)
 {
   x->input[12]  = 0;
   x->input[13]  = 0;
+
   x->input[14]  = U8TO32_LITTLE(iv + 0);
   x->input[15]  = U8TO32_LITTLE(iv + 4);
 }
@@ -308,8 +310,8 @@ chacha_encrypt_bytes(chacha_ctx *x, const u8 *m, u8 *c, u32 bytes)
 
 # define __RSBLOCKS    16
 
-# define __max(a, b)   (( a ) > ( b ) ? ( a ) : ( b ))
-# define __RSBUFSZ     ( __RSBLOCKS * __max(ARC4R_BLOCKSZ, ARC4R_BLOCKSZ))
+# define __max(a, b)   ( ( a ) > ( b ) ? ( a ) : ( b ) )
+# define __RSBUFSZ     ( __RSBLOCKS * __max(ARC4R_BLOCKSZ, ARC4R_BLOCKSZ) )
 
 /*
  * Fetch n bytes of entropy from the system and fill the output buffer
@@ -354,6 +356,7 @@ struct crypto_rand_state
 
   void (*crypt_rekey) (struct crypto_rand_state *);
 };
+
 typedef struct crypto_rand_state crypto_rand_state;
 
 # define CRYPTO_RAND_CHACHA20  2
