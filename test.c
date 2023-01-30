@@ -1,3 +1,10 @@
+/*
+ * vim: filetype=c:tabstop=4:ai:expandtab
+ * SPDX-License-Identifier: ISC
+ * scspell-id: 5d0569de-a0f3-11ed-9380-80ee73e9b8e7
+ * Copyright (c) 2023 The DPS8M Development Team
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>

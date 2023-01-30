@@ -1,4 +1,10 @@
 /*
+ * vim: filetype=c:tabstop=4:ai:expandtab
+ * SPDX-License-Identifier: ISC
+ * scspell-id: e8c15666-a0f2-11ed-a637-80ee73e9b8e7
+ *
+ * ---------------------------------------------------------------------------
+ *
  * Copyright (c) 1996 David Mazieres <dm@uun.org>
  * Copyright (c) 2008 Damien Miller <djm@openbsd.org>
  * Copyright (c) 2013 Markus Friedl <markus@openbsd.org>
@@ -18,6 +24,8 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ * ---------------------------------------------------------------------------
  */
 
 #ifndef ___CHARANDOM_H___

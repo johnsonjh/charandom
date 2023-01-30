@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: ISC
+# scspell-id: bb236764-a0f4-11ed-a5af-80ee73e9b8e7
+# Copyright (c) 2023 The DPS8M Development Team
+
 # Object files
 *.o
 *.ko
