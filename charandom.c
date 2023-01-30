@@ -3,7 +3,7 @@
  * Copyright (c) 2008 Damien Miller <djm@openbsd.org>
  * Copyright (c) 2013 Markus Friedl <markus@openbsd.org>
  * Copyright (c) 2014 Theo de Raadt <deraadt@openbsd.org>
- * Copyright (c) 2015 Sudhi Herle <sudhi@herle.net>
+ * Copyright (c) 2015-2021 Sudhi Herle <sudhi@herle.net>
  * Copyright (c) 2021 Jeffrey H. Johnson <trnsz@pobox.com>
  * Copyright (c) 2023 The DPS8M Development Team
  *
@@ -21,7 +21,7 @@
  */
 
 /*
- * ChaCha based random number generator based on OpenBSD arc4random.
+ * ChaCha-based random number generator derived from OpenBSD arc4random.
  * This cryptographic random generator passes NIST-SP-800-22 (Rev 1).
  */
 
@@ -34,32 +34,33 @@
 #include <sys/types.h>
 #include <errno.h>
 
-#include "cryptorand.h"
-
-void error(int doexit, int err, const char *fmt, ...);
+#include "charandom.h"
 
 static int
-dps__randopen(const char *name)
+cha_randopen(const char *name)
 {
   int fd = open(name, O_RDONLY);
 
   if (fd < 0)
     {
-      error(1, errno, "Cannot open system random number dev %s", name);
+      (void)fprintf(stderr,
+        "\r\nFATAL: Unable to access %s: %s.\r\n",
+        name, strerror(errno));
+      abort();
     }
 
   return fd;
 }
 
 int
-dps__getentropy(void *buf, size_t n)
+cha_getentropy(void *buf, size_t n)
 {
   static int  fd  = -1;
   uint8_t *   b   = (uint8_t *)buf;
 
   if (fd < 0)
     {
-      fd = dps__randopen("/dev/urandom");
+      fd = cha_randopen("/dev/urandom");
     }
 
   while (n > 0)
@@ -73,7 +74,10 @@ dps__getentropy(void *buf, size_t n)
               continue;
             }
 
-          error(1, errno, "Fatal read error while reading rand dev");
+          (void)fprintf(stderr,
+            "\r\nFATAL: Failure reading: %s.\r\n",
+	    strerror(errno));
+          abort();
         }
 
       b  += m;
@@ -82,7 +86,8 @@ dps__getentropy(void *buf, size_t n)
 
   return 0;
 }
-#define minimum(a, b)      (( a ) < ( b ) ? ( a ) : ( b ))
+
+#define minimum(a, b)      ( ( a ) < ( b ) ? ( a ) : ( b ) )
 
 #define RAND_RESEED_BYTES  ( 128 * 1024 )
 
@@ -153,7 +158,49 @@ _rs_stir_if_needed(crypto_rand_state *st, size_t len)
   st->count -= len;
 }
 
-#include "cipher.h"
+
+static inline void
+__chacha_key_setup(crypto_rand_state *st, uint8_t *key, uint8_t *iv)
+{
+  chacha_keysetup (&st->chacha, key, ARC4R_KEYSZ * 8, 0);
+  chacha_ivsetup  (&st->chacha, iv);
+}
+
+static void
+__chacha_crypt_buf(crypto_rand_state *st)
+{
+  chacha_encrypt_bytes(&st->chacha, st->buf, st->buf, sizeof st->buf);
+}
+
+static void
+__chacha_rekey(crypto_rand_state *st)
+{
+  uint8_t  rnd[ARC4R_KEYSZ + ARC4R_IVSZ];
+
+  (void)(*st->entropy)(rnd, sizeof rnd);
+
+  _rs_rekey(st, rnd, sizeof ( rnd ));
+}
+
+static void
+__chacha_reinit(crypto_rand_state *st)
+{
+  uint8_t * key  = &st->buf[0];
+  uint8_t * iv   = key + ARC4R_KEYSZ;
+
+  __chacha_key_setup(st, key, iv);
+
+  memset(key, 0, ARC4R_KEYSZ + ARC4R_IVSZ); /* //-V1086 */
+  st->ptr = st->buf + ( ARC4R_KEYSZ + ARC4R_IVSZ );
+}
+
+static inline void
+__chacha_init(crypto_rand_state *st)
+{
+  uint8_t rnd[ARC4R_KEYSZ + ARC4R_IVSZ];
+
+  __chacha_key_setup(st, rnd, rnd + ARC4R_KEYSZ);
+}
 
 static void
 _chacha_setup(crypto_rand_state *st)
@@ -228,6 +275,8 @@ crypto_rand_buf(crypto_rand_state *st, void *buf, size_t n)
         }
     }
 }
+
+#ifdef WANT_CHADOUBLE
 
 /*
  * Calculate a uniformly distributed random number less than
@@ -320,3 +369,5 @@ crypto_rand_uniform64_bounded(crypto_rand_state *st, uint64_t upper_bound)
 
   return r % upper_bound;
 }
+
+#endif /* ifdef WANT_CHADOUBLE */

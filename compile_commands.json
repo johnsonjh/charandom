@@ -1,0 +1,72 @@
+[
+  {
+    "arguments": [
+      "/usr/lib64/ccache/cc",
+      "-O3",
+      "-march=native",
+      "-flto=auto",
+      "-Wall",
+      "-I.",
+      "-c",
+      "-o",
+      "test.o",
+      "test.c"
+    ],
+    "directory": "/home/jhj/src/crypto-rand",
+    "file": "/home/jhj/src/crypto-rand/test.c",
+    "output": "/home/jhj/src/crypto-rand/test.o"
+  },
+  {
+    "arguments": [
+      "/usr/lib64/ccache/cc",
+      "-O3",
+      "-march=native",
+      "-flto=auto",
+      "-Wall",
+      "-I.",
+      "-c",
+      "-o",
+      "charandom.o",
+      "charandom.c"
+    ],
+    "directory": "/home/jhj/src/crypto-rand",
+    "file": "/home/jhj/src/crypto-rand/charandom.c",
+    "output": "/home/jhj/src/crypto-rand/charandom.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O3",
+      "-march=native",
+      "-flto=auto",
+      "-Wall",
+      "-I.",
+      "-c",
+      "-fdiagnostics-color",
+      "-o",
+      "test.o",
+      "test.c"
+    ],
+    "directory": "/home/jhj/src/crypto-rand",
+    "file": "/home/jhj/src/crypto-rand/test.c",
+    "output": "/home/jhj/src/crypto-rand/test.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-O3",
+      "-march=native",
+      "-flto=auto",
+      "-Wall",
+      "-I.",
+      "-c",
+      "-fdiagnostics-color",
+      "-o",
+      "charandom.o",
+      "charandom.c"
+    ],
+    "directory": "/home/jhj/src/crypto-rand",
+    "file": "/home/jhj/src/crypto-rand/charandom.c",
+    "output": "/home/jhj/src/crypto-rand/charandom.o"
+  }
+]
