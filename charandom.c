@@ -205,7 +205,7 @@ __chacha_reinit(crypto_rand_state *st)
 static inline void
 __chacha_init(crypto_rand_state *st)
 {
-  uint8_t rnd[ARC4R_KEYSZ + ARC4R_IVSZ];
+  uint8_t rnd[ARC4R_KEYSZ + ARC4R_IVSZ] = { (uint8_t)0 };
 
   __chacha_key_setup(st, rnd, rnd + ARC4R_KEYSZ);
 }
