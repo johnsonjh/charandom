@@ -6,13 +6,15 @@ Copyright (c) 2023 The DPS8M Development Team
 
 # ChaRandom
 
-- ChaCha-based random number generator derived from OpenBSD `arc4random(3)`.
-- This cryptographic random generator passes NIST-SP-800-22 (Rev 1).
+- ChaCha-based random number generator derived from *OpenBSD*'s `arc4random`(`3`)`.
+- This cryptographic random generator passes **NIST-SP-800-22** (*Rev 1*).
 
 ### ent
 
 ```
 $ test 2147483647 | ent
+```
+```
 Entropy = 8.000000 bits per byte.
 
 Optimum compression would reduce the size
@@ -30,7 +32,8 @@ Serial correlation coefficient is -0.000005 (totally uncorrelated = 0.0).
 
 ```
 $ test | dieharder -a -g 200 -k 2 -Y 1
-
+```
+```
 #=====================================================================#
 #            dieharder version 3.31.1 Copyright 2003 Robert G. Brown  #
 #=====================================================================#
