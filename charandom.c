@@ -84,7 +84,7 @@ cha_getentropy(void *buf, size_t n)
 
           (void)fprintf(stderr,
             "\r\nFATAL: Failure reading: %s.\r\n",
-	    strerror(errno));
+            strerror(errno));
           abort();
         }
 
@@ -118,7 +118,7 @@ _rs_rekey(crypto_rand_state *st, uint8_t *dat, size_t datlen)
           st->buf[i] ^= dat[i];
         }
 
-      memset(dat, 0, datlen);
+      (void)memset(dat, 0, datlen);
     }
 
   /*
@@ -141,7 +141,7 @@ _rs_stir(crypto_rand_state *st)
    * Invalidate rand buf
    */
 
-  memset(st->buf, 0, sizeof st->buf);
+  (void)memset(st->buf, 0, sizeof st->buf);
   st->ptr    = st->buf + sizeof st->buf;
   st->count  = RAND_RESEED_BYTES;
 }
@@ -198,7 +198,7 @@ __chacha_reinit(crypto_rand_state *st)
 
   __chacha_key_setup(st, key, iv);
 
-  memset(key, 0, ARC4R_KEYSZ + ARC4R_IVSZ); /* //-V1086 */
+  (void)memset(key, 0, ARC4R_KEYSZ + ARC4R_IVSZ); /* //-V1086 */
   st->ptr = st->buf + ( ARC4R_KEYSZ + ARC4R_IVSZ );
 }
 
@@ -231,7 +231,7 @@ crypto_rand_init(crypto_rand_state *st, int algo,
       return -EINVAL;
     }
 
-  memset(st, 0, sizeof *st);
+  (void)memset(st, 0, sizeof *st);
   st->entropy = entropy;
 
   switch (algo)
@@ -271,7 +271,11 @@ crypto_rand_buf(crypto_rand_state *st, void *buf, size_t n)
         {
           size_t m = minimum(n, avail);
 
-          memcpy(buf, st->ptr, m);
+          if (!memcpy(buf, st->ptr, m))
+            {
+              (void)fprintf(stderr, "Out of memory. Aborting!\r\n");
+              abort();
+            }
 
           buf      += m;
           n        -= m;

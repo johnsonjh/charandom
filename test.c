@@ -51,7 +51,15 @@ main(int argc, const char *argv[])
 
 loop:
   crypto_rand_buf(&st, buf, n);
-  fwrite(buf, 1, n, stdout);
+  int w = fwrite(buf, 1, n, stdout);
+  if (w != n)
+    {
+      (void)fprintf(stderr, "ERROR: Short write (%d out of %d bytes).\r\n",
+                    w, n);
+      free(buf);
+      buf = NULL;
+      return 0;
+    }
 
   if (n == 1048576)
     goto loop;
