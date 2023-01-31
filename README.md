@@ -7,9 +7,6 @@ Copyright (c) 2023 The DPS8M Development Team
 # ChaRandom
 
 - ChaCha-based random number generator derived from OpenBSD `arc4random(3)`.
-
-## Testing
-
 - This cryptographic random generator passes NIST-SP-800-22 (Rev 1).
 
 ### ent
@@ -34,14 +31,14 @@ Serial correlation coefficient is -0.000005 (totally uncorrelated = 0.0).
 ```
 $ test | dieharder -a -g 200 -k 2 -Y 1
 
-#=============================================================================#
-#            dieharder version 3.31.1 Copyright 2003 Robert G. Brown          #
-#=============================================================================#
+#=====================================================================#
+#            dieharder version 3.31.1 Copyright 2003 Robert G. Brown  #
+#=====================================================================#
    rng_name    |rands/second|   Seed   |
 stdin_input_raw|  3.95e+07  |1014457751|
-#=============================================================================#
+#=====================================================================#
         test_name   |ntup| tsamples |psamples|  p-value |Assessment
-#=============================================================================#
+#=====================================================================#
    diehard_birthdays|   0|       100|     100|0.51248336|  PASSED
       diehard_operm5|   0|   1000000|     100|0.67261855|  PASSED
   diehard_rank_32x32|   0|     40000|     100|0.94089514|  PASSED
