@@ -6,7 +6,7 @@ Copyright (c) 2023 The DPS8M Development Team
 
 # ChaRandom
 
-- ChaCha-based random number generator derived from *OpenBSD*'s `arc4random`(`3`)`.
+- ChaCha-based random number generator derived from *OpenBSD*'s `arc4random`(`3`).
 - This cryptographic random generator passes **NIST-SP-800-22** (*Rev 1*).
 
 ### ent
