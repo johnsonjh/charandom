@@ -1,5 +1,5 @@
 /*
- * vim: filetype=c:tabstop=4:ai:expandtab
+ * vim: filetype=c:tabstop=2:ai:expandtab
  * SPDX-License-Identifier: ISC
  * scspell-id: e8c15666-a0f2-11ed-a637-80ee73e9b8e7
  *
@@ -38,6 +38,14 @@
 
 # include <stdint.h>
 # include <sys/types.h>
+# include <errno.h>
+# include <fcntl.h>
+# include <stdint.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <string.h>
+# include <sys/types.h>
+# include <unistd.h>
 
 typedef unsigned char u8;
 typedef uint32_t     u32;
@@ -91,8 +99,6 @@ typedef struct chacha_ctx chacha_ctx;
 
 static const char  sigma[16]  = "expand 32-byte k";
 static const char  tau[16]    = "expand 16-byte k";
-
-int cha_getentropy(void *buf, size_t n);
 
 static inline void
 chacha_keysetup(chacha_ctx *x, const u8 *k, u32 kbits, u32 ivbits)
@@ -230,7 +236,6 @@ chacha_encrypt_bytes(chacha_ctx *x, const u8 *m, u8 *c, u32 bytes)
       x14  = PLUS(x14, j14);
       x15  = PLUS(x15, j15);
 
-# ifndef KEYSTREAM_ONLY
       x0   = XOR(x0,  U8TO32_LITTLE(m +  0));
       x1   = XOR(x1,  U8TO32_LITTLE(m +  4));
       x2   = XOR(x2,  U8TO32_LITTLE(m +  8));
@@ -247,30 +252,29 @@ chacha_encrypt_bytes(chacha_ctx *x, const u8 *m, u8 *c, u32 bytes)
       x13  = XOR(x13, U8TO32_LITTLE(m + 52));
       x14  = XOR(x14, U8TO32_LITTLE(m + 56));
       x15  = XOR(x15, U8TO32_LITTLE(m + 60));
-# endif /* ifndef KEYSTREAM_ONLY */
 
       j12 = PLUSONE(j12);
       if (!j12)
         {
           j13 = PLUSONE(j13);
         }
-
-      U32TO8_LITTLE(c +  0,  x0);
-      U32TO8_LITTLE(c +  4,  x1);
-      U32TO8_LITTLE(c +  8,  x2);
-      U32TO8_LITTLE(c + 12,  x3);
-      U32TO8_LITTLE(c + 16,  x4);
-      U32TO8_LITTLE(c + 20,  x5);
-      U32TO8_LITTLE(c + 24,  x6);
-      U32TO8_LITTLE(c + 28,  x7);
-      U32TO8_LITTLE(c + 32,  x8);
-      U32TO8_LITTLE(c + 36,  x9);
-      U32TO8_LITTLE(c + 40, x10);
-      U32TO8_LITTLE(c + 44, x11);
-      U32TO8_LITTLE(c + 48, x12);
-      U32TO8_LITTLE(c + 52, x13);
-      U32TO8_LITTLE(c + 56, x14);
-      U32TO8_LITTLE(c + 60, x15);
+                                   /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c +  0,  x0);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c +  4,  x1);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c +  8,  x2);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 12,  x3);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 16,  x4);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 20,  x5);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 24,  x6);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 28,  x7);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 32,  x8);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 36,  x9);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 40, x10);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 44, x11);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 48, x12);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 52, x13);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 56, x14);  /* LINTED E_CONSTANT_CONDITION */
+      U32TO8_LITTLE(c + 60, x15);  /* LINTED E_CONSTANT_CONDITION */
 
       if (bytes <= 64)
         {
@@ -289,9 +293,7 @@ chacha_encrypt_bytes(chacha_ctx *x, const u8 *m, u8 *c, u32 bytes)
 
       bytes  -= 64;
       c      += 64;
-# ifndef KEYSTREAM_ONLY
       m      += 64;
-# endif /* ifndef KEYSTREAM_ONLY */
     }
 }
 
@@ -361,99 +363,248 @@ typedef struct crypto_rand_state crypto_rand_state;
 
 # define CRYPTO_RAND_CHACHA20  2
 
-/*
- * Initialize the random generator state using the given cipher
- * algo (must be one of CRYPTO_RAND_CHACHA20).
- *
- * Use the supplied function to fetch entropy when we need it.
- */
-
-extern int crypto_rand_init(crypto_rand_state *, int algo,
-                            crypto_rand_entropy_t entropy);
-
-/*
- * Fill a buffer with random data
- */
-
-extern void crypto_rand_buf(crypto_rand_state *, void *buf, size_t nbytes);
-
-# ifdef WANT_CHARDOUBLE
-
-/*
- * Return a uniform random uint64
- */
-
-extern uint64_t crypto_rand_uniform64_bounded(crypto_rand_state *,
-                                              uint64_t upper_bound);
-
-/*
- * Return a uniform random uint32
- */
-
-extern uint32_t crypto_rand_uniform32_bounded(crypto_rand_state *,
-                                              uint32_t upper_bound);
-
-/*
- * Return a uniform uint64
- */
-
-static inline uint64_t
-crypto_rand_uniform64(crypto_rand_state *st)
+static int
+cha_randopen(const char *name)
 {
-  uint64_t z = 0;
+  int fd = open(name, O_RDONLY);
 
-  crypto_rand_buf(st, &z, sizeof(z));
-  return z;
-}
-
-/*
- * Return a uniform uint32
- */
-
-static inline uint32_t
-crypto_rand_uniform32(crypto_rand_state *st)
-{
-  uint32_t z = 0;
-
-  crypto_rand_buf(st, &z, sizeof(z));
-  return z;
-}
-
-/*
- * Return a random float64 in the range [0.0, 1.0].
- *
- * Notes
- * =====
- *
- * IEEE 754 double precision format:
- *   bit 63    :  sign
- *   bit 62-52 :  exponent (11 bits)
- *   bit 51-0  :  fraction
- *
- * So, when we set sign = 0 and exponent = 0xfff, then the format
- * represents a normalized number in the range [1, 2].
- *
- * So, if we can manage to fill the 52 bits with random bits, we will have
- * a normalized random number in the range [1, 2]. Then, we subtract 1.0
- * and voila - we have a random number in the range [0, 1.0].
- */
-
-  static inline double
-  crypto_rand_double(crypto_rand_state *st)
-  {
-    union
+  if (fd < 0)
     {
-      double d;
-      uint64_t v;
-    } un;
+      (void)fprintf(stderr,
+        "\r\nFATAL: Unable to access %s: %s.\r\n",
+        name, strerror(errno));
+      abort();
+    }
 
-    uint64_t  r = crypto_rand_uniform64(st) & ~0xfff0000000000000;
+  return fd;
+}
 
-    un.d  = 1.0;
-    un.v |= r;
+static int
+cha_getentropy(void *buf, size_t n)
+{
+  static int  fd  = -1;
+  uint8_t *   b   = (uint8_t *)buf;
 
-    return un.d - 1.0;
-  }
+  if (fd < 0)
+    {
+      fd = cha_randopen("/dev/urandom");
+    }
 
-# endif /* ifdef WANT_CHADOUBLE */
+  while (n > 0)
+    {
+      ssize_t m = (read)( fd, b, n );
+
+      if (m < 0)
+        {
+          if (errno == EINTR)
+            {
+              continue;
+            }
+
+          (void)fprintf(stderr,
+            "\r\nFATAL: Failure reading: %s.\r\n",
+            strerror(errno));
+          abort();
+        }
+
+      b  += m;
+      n  -= m;
+    }
+
+  return 0;
+}
+
+#define minimum(a, b)      ( ( a ) < ( b ) ? ( a ) : ( b ) )
+
+#define RAND_RESEED_BYTES  ( 128 * 1024 )
+
+static inline void
+_rs_rekey(crypto_rand_state *st, uint8_t *dat, size_t datlen)
+{
+  st->crypt_buf(st);
+
+  /*
+   * Mix in optional user provided data
+   */
+
+  if (dat)
+    {
+      size_t i, m;
+
+      m = minimum(datlen, sizeof(st->buf));
+      for (i = 0; i < m; i++)
+        {
+          st->buf[i] ^= dat[i];
+        }
+
+      (void)memset(dat, 0, datlen);
+    }
+
+  /*
+   * Immediately re-init for backtracking resistance
+   */
+
+  st->crypt_reinit(st);
+}
+
+/*
+ * Stir the pot by rekeying
+ */
+
+static void
+_rs_stir(crypto_rand_state *st)
+{
+  st->crypt_rekey(st);
+
+  /*
+   * Invalidate rand buf
+   */
+
+  (void)memset(st->buf, 0, sizeof(st->buf));
+  st->ptr    = st->buf + sizeof(st->buf);
+  st->count  = RAND_RESEED_BYTES;
+}
+
+/*
+ * Maybe stir the pot
+ */
+
+static inline void
+_rs_stir_if_needed(crypto_rand_state *st, size_t len)
+{
+  if (st->count <= len)
+    {
+      _rs_stir(st);
+    }
+
+  /*
+   * We explicitly don't worry about underflow because
+   * we want this to be somewhat random after we stir.
+   */
+
+  st->count -= len;
+}
+
+
+static inline void
+__chacha_key_setup(crypto_rand_state *st, uint8_t *key, uint8_t *iv)
+{
+  chacha_keysetup (&st->chacha, key, ARC4R_KEYSZ * 8, 0);
+  chacha_ivsetup  (&st->chacha, iv);
+}
+
+static void
+__chacha_crypt_buf(crypto_rand_state *st)
+{
+  chacha_encrypt_bytes(&st->chacha, st->buf, st->buf, sizeof(st->buf));
+}
+
+static void
+__chacha_rekey(crypto_rand_state *st)
+{
+  uint8_t  rnd[ARC4R_KEYSZ + ARC4R_IVSZ];
+
+  (void)(*st->entropy)(rnd, sizeof(rnd));
+
+  _rs_rekey(st, rnd, sizeof(rnd));
+}
+
+static void
+__chacha_reinit(crypto_rand_state *st)
+{
+  uint8_t * key  = &st->buf[0];
+  uint8_t * iv   = key + ARC4R_KEYSZ;
+
+  __chacha_key_setup(st, key, iv);
+
+  (void)memset(key, 0, ARC4R_KEYSZ + ARC4R_IVSZ); /* //-V1086 */
+  st->ptr = st->buf + ( ARC4R_KEYSZ + ARC4R_IVSZ );
+}
+
+static inline void
+__chacha_init(crypto_rand_state *st)
+{
+  uint8_t rnd[ARC4R_KEYSZ + ARC4R_IVSZ] = { (uint8_t)0 };
+
+  __chacha_key_setup(st, rnd, rnd + ARC4R_KEYSZ);
+}
+
+static void
+_chacha_setup(crypto_rand_state *st)
+{
+  st->crypt_buf     = __chacha_crypt_buf;
+  st->crypt_reinit  = __chacha_reinit;
+  st->crypt_rekey   = __chacha_rekey;
+}
+
+/*
+ * External API
+ */
+
+static int
+crypto_rand_init(crypto_rand_state *st, int algo,
+                 crypto_rand_entropy_t entropy)
+{
+  if (!entropy)
+    {
+      return -EINVAL;
+    }
+
+  (void)memset(st, 0, sizeof(*st));
+  st->entropy = entropy;
+
+  switch (algo)
+    {
+    case CRYPTO_RAND_CHACHA20:
+      _chacha_setup(st);
+      __chacha_init(st);
+      break;
+
+    default:
+      return -EINVAL;
+    }
+
+  /*
+   * When we startup, st->buf is zero so, we are
+   * encrypting a zero-buf with a random key & IV.
+   */
+
+  _rs_rekey(st, 0, 0);
+  return 0;
+}
+
+/*
+ * Fill buffer with randomness
+ */
+
+static void
+crypto_rand_buf(crypto_rand_state *st, void *buf, size_t n)
+{
+  uint8_t *end = st->buf + sizeof(st->buf);
+
+  _rs_stir_if_needed(st, n);
+  while (n > 0)
+    {
+      size_t avail = end - st->ptr;
+      if (avail > 0)
+        {
+          size_t m = minimum(n, avail);
+
+          if (!memcpy(buf, st->ptr, m))
+            {
+              (void)fprintf(stderr, "Out of memory. Aborting!\r\n");
+              abort();
+            }
+
+          buf      += m;
+          n        -= m;
+          st->ptr  += m;
+        }
+      else
+        {
+          _rs_rekey(st, NULL, 0);
+        }
+    }
+}
+
 #endif /* ifndef ___CHARANDOM_H___ */
