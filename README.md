@@ -161,6 +161,8 @@ Preparing to run test 209.  ntuple = 0
         dab_monobit2|  12|  65000000|       1|0.58132465|  PASSED
 ```
 
+### PractRand
+
 ```
 $ test 0 | PractRand_RNG_test stdin -a -te 10
 ```
