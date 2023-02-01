@@ -112,7 +112,7 @@ _rs_rekey(crypto_rand_state *st, uint8_t *dat, size_t datlen)
     {
       size_t i, m;
 
-      m = minimum(datlen, sizeof st->buf);
+      m = minimum(datlen, sizeof(st->buf));
       for (i = 0; i < m; i++)
         {
           st->buf[i] ^= dat[i];
@@ -141,8 +141,8 @@ _rs_stir(crypto_rand_state *st)
    * Invalidate rand buf
    */
 
-  (void)memset(st->buf, 0, sizeof st->buf);
-  st->ptr    = st->buf + sizeof st->buf;
+  (void)memset(st->buf, 0, sizeof(st->buf));
+  st->ptr    = st->buf + sizeof(st->buf);
   st->count  = RAND_RESEED_BYTES;
 }
 
@@ -177,7 +177,7 @@ __chacha_key_setup(crypto_rand_state *st, uint8_t *key, uint8_t *iv)
 static void
 __chacha_crypt_buf(crypto_rand_state *st)
 {
-  chacha_encrypt_bytes(&st->chacha, st->buf, st->buf, sizeof st->buf);
+  chacha_encrypt_bytes(&st->chacha, st->buf, st->buf, sizeof(st->buf));
 }
 
 static void
@@ -185,9 +185,9 @@ __chacha_rekey(crypto_rand_state *st)
 {
   uint8_t  rnd[ARC4R_KEYSZ + ARC4R_IVSZ];
 
-  (void)(*st->entropy)(rnd, sizeof rnd);
+  (void)(*st->entropy)(rnd, sizeof(rnd));
 
-  _rs_rekey(st, rnd, sizeof ( rnd ));
+  _rs_rekey(st, rnd, sizeof(rnd));
 }
 
 static void
@@ -231,7 +231,7 @@ crypto_rand_init(crypto_rand_state *st, int algo,
       return -EINVAL;
     }
 
-  (void)memset(st, 0, sizeof *st);
+  (void)memset(st, 0, sizeof(*st));
   st->entropy = entropy;
 
   switch (algo)
@@ -261,7 +261,7 @@ crypto_rand_init(crypto_rand_state *st, int algo,
 void
 crypto_rand_buf(crypto_rand_state *st, void *buf, size_t n)
 {
-  uint8_t *end = st->buf + sizeof st->buf;
+  uint8_t *end = st->buf + sizeof(st->buf);
 
   _rs_stir_if_needed(st, n);
   while (n > 0)

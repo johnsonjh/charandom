@@ -160,3 +160,27 @@ Preparing to run test 208.  ntuple = 0
 Preparing to run test 209.  ntuple = 0
         dab_monobit2|  12|  65000000|       1|0.58132465|  PASSED
 ```
+
+```
+$ test 0 | PractRand_RNG_test stdin -a -te 10
+```
+```
+rng=RNG_stdin, seed=unknown
+length= 1 terabyte (2^40 bytes), time= 16512 seconds
+  Test Name                    Raw        Processed  Evaluation
+  BDayS128(26):all1            R=  -0.9   p~= 0.8    normal
+  BDayS128(26):all2            R=  -0.6   p~= 0.7    normal
+  [Low1/8]BDayS128(26):all1    R=  +1.1   p~= 0.1    normal
+  [Low1/8]BDayS128(26):all2    R=  +0.1   p~= 0.5    normal
+  [Low4/32]BDayS128(26):all1   R=  -0.3   p~= 0.6    normal
+  [Low4/32]BDayS128(26):all2   R=  +0.2   p~= 0.4    normal
+  [Low1/32]BDayS128(26):all1   R=  +0.5   p~= 0.3    normal
+  [Low1/32]BDayS128(26):all2   R=  +0.9   p~= 0.2    normal
+```
+
+```
+$ test 0 | PractRand_RNG_test stdin -a
+```
+```
+TBD
+```

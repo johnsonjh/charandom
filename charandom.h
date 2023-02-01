@@ -402,7 +402,7 @@ crypto_rand_uniform64(crypto_rand_state *st)
 {
   uint64_t z = 0;
 
-  crypto_rand_buf(st, &z, sizeof z);
+  crypto_rand_buf(st, &z, sizeof(z));
   return z;
 }
 
@@ -415,7 +415,7 @@ crypto_rand_uniform32(crypto_rand_state *st)
 {
   uint32_t z = 0;
 
-  crypto_rand_buf(st, &z, sizeof z);
+  crypto_rand_buf(st, &z, sizeof(z));
   return z;
 }
 
